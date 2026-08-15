@@ -1,0 +1,173 @@
+PeTechnology
+    v0.0.2
+
+
+python SevenEngine.py "路径"
+python SevenEngine.py "文件路径"
+
+示例输出，仅供参考
+文件：
+Microsoft Windows [版本 10.0.26200.8875]
+(c) Microsoft Corporation。保留所有权利。
+
+D:\Administrator\Desktop\SevenEngineCloud>python SevenEngine.py "D:\训练病毒\doubao_client_ext\doubao_client_ext.msi"
+Result: MALICIOUS|HEUR:Trojan.Win32.MSI.ns9|SE-Precise|95
+Confidence: 95
+Info: HEUR:Trojan.Win32.MSI.ns9
+
+D:\Administrator\Desktop\SevenEngineCloud>
+
+文件夹：
+D:\Administrator\Desktop\SevenEngineCloud>python SevenEngine.py D:\训练病毒
+扫描目录: D:\训练病毒
+  [!] MALICIOUS|Trojan.Win32.Generic.bub|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\new_hotmail_pass_changer.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.eqh|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\07fad0b7.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.bca|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\NMSSaveEditor.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.i5q|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\mpclient.dll
+  [!] MALICIOUS|Trojan.Win32.Generic.ekj|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\Setup.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.0cp|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\asr.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.8uz|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\Unyx.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.dsz|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\BypassCs.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.kxb|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\core-silent.exe
+  [!] MALICIOUS|Trojan.Win32.Launcher.r7e|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\Void Launcher.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.isc|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\Exodus Larp V2.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.k33|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\VapeV4.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.2e9|SE-Precise|95  D:\训练病毒\20260707Stealer 14x\USERENV.dll
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.fr3|SE-Chain|95  D:\训练病毒\20260722Stealer 10x\PAGO.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.COM.7zk|PE-LowImport|66  D:\训练病毒\20260722Stealer 10x\FTT COPY - 0000180926310033.com
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.b9g|PE-Suspicious|85  D:\训练病毒\20260722Stealer 10x\Run.exe
+  [!] MALICIOUS|HEUR:Trojan.JS.Generic.is0|Script|82  D:\训练病毒\20260722Stealer 10x\PAGO.js
+  [!] MALICIOUS|HEUR:Trojan.JS.Generic.nkp|Script|95  D:\训练病毒\20260722Stealer 10x\PO_2026_0001.pdf.js
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.c1r|SE-Chain|95  D:\训练病毒\20260722Stealer 10x\ggwpcheats.exe
+  [!] MALICIOUS|HEUR:Trojan.JS.Generic.crd|Script|95  D:\训练病毒\20260722Stealer 10x\PO_148905.js
+  [OK] CLEAN  D:\训练病毒\20260722Stealer 10x\uxtheme.dll
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.ba8|PE-Suspicious|85  D:\训练病毒\20260722Stealer 10x\ViceCallers.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.7mt|MSI-Heuristic|85  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\coslgma_ggllq_x64.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.Injector.kah|PE|83  D:\训练病毒\20260722Stealer 10x\vsdbg.dll
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.h32|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\3.6.0_TotlSecuity_4.8.5158.exe
+  [!] MALICIOUS|HEUR:Backdoor.Win32.Remote.qhv|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\AweXrk_remote_v15.1.1.2279.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.sy3|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\3.6.0.Safewin_chfy_PIAX_v0.1.2.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.jfc|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\Hrdiag_setuprs_5.0.69.8.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.hz6|PE-Suspicious|85  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\Goianga-chuan-6.22.9.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.99f|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\AewSun_xrk_x64_727.09.55.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.KeyLogger.r6r|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\HRSDSteups_win_7.26_mwosc.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.rt2|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\hrwsInst-V5.6_7.23_xvozm.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.y8e|MSI-Heuristic|85  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\setupll.0.nn004.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.rf8|MSI-Heuristic|85  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\nfthmgqsyy_3.2.1_x64.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.td5|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\NetaedclosX64.23.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.tiw|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\qs_sodamusic-v0956-win32_x64.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.t2m|SE-Precise|95  D:\训练病毒\app_setup.6653014\app_setup.6653014.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.zf8|SE-Precise|95  D:\训练病毒\app_setup.6653014q\app_setup.6653014.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.mim|SE-Precise|95  D:\训练病毒\aqpp_setup.6653014\app_setup.6653014.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.7i6|SE-Precise|95  D:\训练病毒\DeepL\DeepL.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.iqc|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\SoDaMusic-v6.2.5-oFFicial-win58_x64.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.u9c|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\SodaieMusic-v2.3.6wi_x64.exe
+  [!] MALICIOUS|Trojan.Win32.Downloader.nhy|SE-Precise|95  D:\训练病毒\dingTtalkx64_down\dingtalk_downloader.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.xbr|SE-Precise|95  D:\训练病毒\DeepSeek_v4_win\DeepSeek_v4_win.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.dmr|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\TD_setup_x86_7.27.0.9.5.7.exe
+  [!] MALICIOUS|HEUR:Backdoor.Win32.Remote.xf1|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\Toyota_remote_tool_413.4825.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.cni|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\XrAweSunhiu_38.1.6.36_x64.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.ns9|SE-Precise|95  D:\训练病毒\doubao_client_ext\doubao_client_ext.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.hyb|SE-Chain|95  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\wangyiyunX64_setup_win_v11.12.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.2wx|SE-Precise|95  D:\训练病毒\Mal-4x\-点击安装简体中文包-.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.fer|SE-Precise|95  D:\训练病毒\Mal-4x\安装简体中文包-.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.z0q|SE-Precise|95  D:\训练病毒\Mal-4x\点击安装中文语言包z.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.mjg|SE-Precise|95  D:\训练病毒\gou_shurufa_x64\gou_shurufa_x64.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.mxf|SE-Precise|95  D:\训练病毒\Mal-4x\点击此处安装简体中文语言包 .exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.f6w|PE-Suspicious|85  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\xrk-iuangha-Biaua6.2.3.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.gqv|SE-Precise|95  D:\训练病毒\i4Tools8_v8.17_Setup_x64\i4Tools8_v8.17_Setup_x64转接口.msi
+  [!] MALICIOUS|Trojan.Win32.Generic.2jt|SE-Precise|95  D:\训练病毒\PowerWord.800.12012\PowerWord.800.12012.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.d6d|SE-Precise|95  D:\训练病毒\Feishu-win32_x64-7.67.9-signed\Feishu-win32_x64-7.67.9-signed.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.nsc|SE-Precise|95  D:\训练病毒\qianniuSetup.4.0\qianniuSetup.4.0.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.t42|SE-Precise|95  D:\训练病毒\feishuxz-x64.6.15\feishuxz-x64.6.15.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.gwg|SE-Precise|95  D:\训练病毒\Is4aide_v4.28.2605_x64\Is4aide_v4.28.2605_x64.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.2si|SE-Precise|95  D:\训练病毒\zintall.6638250002\zintall.6638250002.msi
+  [!] MALICIOUS|HEUR:Trojan.Win32.MSI.q57|SE-Precise|95  D:\训练病毒\Mutec_Setup_YYbucX64.26\Mutec_Setup_YYbucX64.26.msi
+  [!] MALICIOUS|Trojan.Win32.Generic.vw8|SE-Precise|95  D:\训练病毒\SodaMusic-v3.2.1-official-win32_x64\SodaMusic-v3.2.1-official-win32_x64.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.xdu|SE-Precise|95  D:\训练病毒\sougouExpiorerr_Setup_x64_25537\SogouExplorer_Setup_x64.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.mg6|SE-Precise|95  D:\训练病毒\自制\非自制\MEMZ.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.zdq|SE-Precise|95  D:\训练病毒\yfy-fanyifuan-6.22.8\yfy-fanyifuan-6.22.8.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.9hw|SE-Precise|95  D:\训练病毒\OneChat-win-AutoSetup\OneChat-win-AutoSetup-1.7.4-x64.exe
+  [!] MALICIOUS|Trojan.Win32.Wiper.zzv|Cloud-DB|90  D:\训练病毒\WinXP.Horror.Destructive\WinXP.Horror.Destructive.exe
+  [!] MALICIOUS|Trojan.Win32.Generic.8ah|Cloud-DB|90  D:\训练病毒\自制\非自制\Pet.exe
+  [!] MALICIOUS|HEUR:Trojan.BAT.Generic.fum|Script|95  D:\训练病毒\自制\GalaGame_Setup.bat
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.ji1|PE-Suspicious|85  D:\训练病毒\自制\Game.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.Generic.4pi|SE-Chain|95  D:\训练病毒\恶性免杀样本\5876be168613a5e77024f79dad518662e8fd418f01d5839fc7e73ecb0f085a92_DeepSeek_v4_win.exe
+  [!] MALICIOUS|HEUR:Trojan.Win32.KeyLogger.1a9|PE|90  D:\训练病毒\WinXP.Horror.Destructive\WinXP.Horror.Peacful.exe
+
+扫描完成: 共 74 文件, 扫描 74, 恶意 73, 干净 1, 白名单 0, 错误 0
+
+--- 检出威胁 ---
+  MALICIOUS|Trojan.Win32.Generic.bub|SE-Precise|95  conf=95  Trojan.Win32.Generic.bub  D:\训练病毒\20260707Stealer 14x\new_hotmail_pass_changer.exe
+  MALICIOUS|Trojan.Win32.Generic.eqh|SE-Precise|95  conf=95  Trojan.Win32.Generic.eqh  D:\训练病毒\20260707Stealer 14x\07fad0b7.exe
+  MALICIOUS|Trojan.Win32.Generic.bca|SE-Precise|95  conf=95  Trojan.Win32.Generic.bca  D:\训练病毒\20260707Stealer 14x\NMSSaveEditor.exe
+  MALICIOUS|Trojan.Win32.Generic.i5q|SE-Precise|95  conf=95  Trojan.Win32.Generic.i5q  D:\训练病毒\20260707Stealer 14x\mpclient.dll
+  MALICIOUS|Trojan.Win32.Generic.ekj|SE-Precise|95  conf=95  Trojan.Win32.Generic.ekj  D:\训练病毒\20260707Stealer 14x\Setup.exe
+  MALICIOUS|Trojan.Win32.Generic.0cp|SE-Precise|95  conf=95  Trojan.Win32.Generic.0cp  D:\训练病毒\20260707Stealer 14x\asr.exe
+  MALICIOUS|Trojan.Win32.Generic.8uz|SE-Precise|95  conf=95  Trojan.Win32.Generic.8uz  D:\训练病毒\20260707Stealer 14x\Unyx.exe
+  MALICIOUS|Trojan.Win32.Generic.dsz|SE-Precise|95  conf=95  Trojan.Win32.Generic.dsz  D:\训练病毒\20260707Stealer 14x\BypassCs.exe
+  MALICIOUS|Trojan.Win32.Generic.kxb|SE-Precise|95  conf=95  Trojan.Win32.Generic.kxb  D:\训练病毒\20260707Stealer 14x\core-silent.exe
+  MALICIOUS|Trojan.Win32.Launcher.r7e|SE-Precise|95  conf=95  Trojan.Win32.Launcher.r7e  D:\训练病毒\20260707Stealer 14x\Void Launcher.exe
+  MALICIOUS|Trojan.Win32.Generic.isc|SE-Precise|95  conf=95  Trojan.Win32.Generic.isc  D:\训练病毒\20260707Stealer 14x\Exodus Larp V2.exe
+  MALICIOUS|Trojan.Win32.Generic.k33|SE-Precise|95  conf=95  Trojan.Win32.Generic.k33  D:\训练病毒\20260707Stealer 14x\VapeV4.exe
+  MALICIOUS|Trojan.Win32.Generic.2e9|SE-Precise|95  conf=95  Trojan.Win32.Generic.2e9  D:\训练病毒\20260707Stealer 14x\USERENV.dll
+  MALICIOUS|HEUR:Trojan.Win32.Generic.fr3|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.fr3  D:\训练病毒\20260722Stealer 10x\PAGO.exe
+  MALICIOUS|HEUR:Trojan.Win32.COM.7zk|PE-LowImport|66  conf=66  HEUR:Trojan.Win32.COM.7zk  D:\训练病毒\20260722Stealer 10x\FTT COPY - 0000180926310033.com
+  MALICIOUS|HEUR:Trojan.Win32.Generic.b9g|PE-Suspicious|85  conf=85  HEUR:Trojan.Win32.Generic.b9g  D:\训练病毒\20260722Stealer 10x\Run.exe
+  MALICIOUS|HEUR:Trojan.JS.Generic.is0|Script|82  conf=82  HEUR:Trojan.JS.Generic.is0  D:\训练病毒\20260722Stealer 10x\PAGO.js
+  MALICIOUS|HEUR:Trojan.JS.Generic.nkp|Script|95  conf=95  HEUR:Trojan.JS.Generic.nkp  D:\训练病毒\20260722Stealer 10x\PO_2026_0001.pdf.js
+  MALICIOUS|HEUR:Trojan.Win32.Generic.c1r|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.c1r  D:\训练病毒\20260722Stealer 10x\ggwpcheats.exe
+  MALICIOUS|HEUR:Trojan.JS.Generic.crd|Script|95  conf=95  HEUR:Trojan.JS.Generic.crd  D:\训练病毒\20260722Stealer 10x\PO_148905.js
+  MALICIOUS|HEUR:Trojan.Win32.Generic.ba8|PE-Suspicious|85  conf=85  HEUR:Trojan.Win32.Generic.ba8  D:\训练病毒\20260722Stealer 10x\ViceCallers.exe
+  MALICIOUS|HEUR:Trojan.Win32.MSI.7mt|MSI-Heuristic|85  conf=85  HEUR:Trojan.Win32.MSI.7mt  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\coslgma_ggllq_x64.msi
+  MALICIOUS|HEUR:Trojan.Win32.Injector.kah|PE|83  conf=83  HEUR:Trojan.Win32.Injector.kah  D:\训练病毒\20260722Stealer 10x\vsdbg.dll
+  MALICIOUS|HEUR:Trojan.Win32.Generic.h32|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.h32  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\3.6.0_TotlSecuity_4.8.5158.exe
+  MALICIOUS|HEUR:Backdoor.Win32.Remote.qhv|SE-Chain|95  conf=95  HEUR:Backdoor.Win32.Remote.qhv  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\AweXrk_remote_v15.1.1.2279.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.sy3|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.sy3  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\3.6.0.Safewin_chfy_PIAX_v0.1.2.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.jfc|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.jfc  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\Hrdiag_setuprs_5.0.69.8.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.hz6|PE-Suspicious|85  conf=85  HEUR:Trojan.Win32.Generic.hz6  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\Goianga-chuan-6.22.9.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.99f|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.99f  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\AewSun_xrk_x64_727.09.55.exe
+  MALICIOUS|HEUR:Trojan.Win32.KeyLogger.r6r|SE-Chain|95  conf=95  HEUR:Trojan.Win32.KeyLogger.r6r  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\HRSDSteups_win_7.26_mwosc.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.rt2|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.rt2  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\hrwsInst-V5.6_7.23_xvozm.exe
+  MALICIOUS|HEUR:Trojan.Win32.MSI.y8e|MSI-Heuristic|85  conf=85  HEUR:Trojan.Win32.MSI.y8e  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\setupll.0.nn004.msi
+  MALICIOUS|HEUR:Trojan.Win32.MSI.rf8|MSI-Heuristic|85  conf=85  HEUR:Trojan.Win32.MSI.rf8  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\nfthmgqsyy_3.2.1_x64.msi
+  MALICIOUS|HEUR:Trojan.Win32.Generic.td5|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.td5  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\NetaedclosX64.23.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.tiw|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.tiw  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\qs_sodamusic-v0956-win32_x64.exe
+  MALICIOUS|HEUR:Trojan.Win32.MSI.t2m|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.t2m  D:\训练病毒\app_setup.6653014\app_setup.6653014.msi
+  MALICIOUS|HEUR:Trojan.Win32.MSI.zf8|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.zf8  D:\训练病毒\app_setup.6653014q\app_setup.6653014.msi
+  MALICIOUS|HEUR:Trojan.Win32.MSI.mim|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.mim  D:\训练病毒\aqpp_setup.6653014\app_setup.6653014.msi
+  MALICIOUS|HEUR:Trojan.Win32.MSI.7i6|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.7i6  D:\训练病毒\DeepL\DeepL.msi
+  MALICIOUS|HEUR:Trojan.Win32.Generic.iqc|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.iqc  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\SoDaMusic-v6.2.5-oFFicial-win58_x64.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.u9c|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.u9c  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\SodaieMusic-v2.3.6wi_x64.exe
+  MALICIOUS|Trojan.Win32.Downloader.nhy|SE-Precise|95  conf=95  Trojan.Win32.Downloader.nhy  D:\训练病毒\dingTtalkx64_down\dingtalk_downloader.exe
+  MALICIOUS|Trojan.Win32.Generic.xbr|SE-Precise|95  conf=95  Trojan.Win32.Generic.xbr  D:\训练病毒\DeepSeek_v4_win\DeepSeek_v4_win.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.dmr|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.dmr  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\TD_setup_x86_7.27.0.9.5.7.exe
+  MALICIOUS|HEUR:Backdoor.Win32.Remote.xf1|SE-Chain|95  conf=95  HEUR:Backdoor.Win32.Remote.xf1  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\Toyota_remote_tool_413.4825.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.cni|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.cni  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\XrAweSunhiu_38.1.6.36_x64.exe
+  MALICIOUS|HEUR:Trojan.Win32.MSI.ns9|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.ns9  D:\训练病毒\doubao_client_ext\doubao_client_ext.msi
+  MALICIOUS|HEUR:Trojan.Win32.Generic.hyb|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.hyb  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\wangyiyunX64_setup_win_v11.12.exe
+  MALICIOUS|Trojan.Win32.Generic.2wx|SE-Precise|95  conf=95  Trojan.Win32.Generic.2wx  D:\训练病毒\Mal-4x\-点击安装简体中文包-.exe
+  MALICIOUS|Trojan.Win32.Generic.fer|SE-Precise|95  conf=95  Trojan.Win32.Generic.fer  D:\训练病毒\Mal-4x\安装简体中文包-.exe
+  MALICIOUS|Trojan.Win32.Generic.z0q|SE-Precise|95  conf=95  Trojan.Win32.Generic.z0q  D:\训练病毒\Mal-4x\点击安装中文语言包z.exe
+  MALICIOUS|Trojan.Win32.Generic.mjg|SE-Precise|95  conf=95  Trojan.Win32.Generic.mjg  D:\训练病毒\gou_shurufa_x64\gou_shurufa_x64.exe
+  MALICIOUS|Trojan.Win32.Generic.mxf|SE-Precise|95  conf=95  Trojan.Win32.Generic.mxf  D:\训练病毒\Mal-4x\点击此处安装简体中文语言包 .exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.f6w|PE-Suspicious|85  conf=85  HEUR:Trojan.Win32.Generic.f6w  D:\训练病毒\20260727FakeApp 20x\20260727FakeApp 20x\xrk-iuangha-Biaua6.2.3.exe
+  MALICIOUS|HEUR:Trojan.Win32.MSI.gqv|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.gqv  D:\训练病毒\i4Tools8_v8.17_Setup_x64\i4Tools8_v8.17_Setup_x64转接口.msi
+  MALICIOUS|Trojan.Win32.Generic.2jt|SE-Precise|95  conf=95  Trojan.Win32.Generic.2jt  D:\训练病毒\PowerWord.800.12012\PowerWord.800.12012.exe
+  MALICIOUS|Trojan.Win32.Generic.d6d|SE-Precise|95  conf=95  Trojan.Win32.Generic.d6d  D:\训练病毒\Feishu-win32_x64-7.67.9-signed\Feishu-win32_x64-7.67.9-signed.exe
+  MALICIOUS|Trojan.Win32.Generic.nsc|SE-Precise|95  conf=95  Trojan.Win32.Generic.nsc  D:\训练病毒\qianniuSetup.4.0\qianniuSetup.4.0.exe
+  MALICIOUS|Trojan.Win32.Generic.t42|SE-Precise|95  conf=95  Trojan.Win32.Generic.t42  D:\训练病毒\feishuxz-x64.6.15\feishuxz-x64.6.15.exe
+  MALICIOUS|HEUR:Trojan.Win32.MSI.gwg|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.gwg  D:\训练病毒\Is4aide_v4.28.2605_x64\Is4aide_v4.28.2605_x64.msi
+  MALICIOUS|HEUR:Trojan.Win32.MSI.2si|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.2si  D:\训练病毒\zintall.6638250002\zintall.6638250002.msi
+  MALICIOUS|HEUR:Trojan.Win32.MSI.q57|SE-Precise|95  conf=95  HEUR:Trojan.Win32.MSI.q57  D:\训练病毒\Mutec_Setup_YYbucX64.26\Mutec_Setup_YYbucX64.26.msi
+  MALICIOUS|Trojan.Win32.Generic.vw8|SE-Precise|95  conf=95  Trojan.Win32.Generic.vw8  D:\训练病毒\SodaMusic-v3.2.1-official-win32_x64\SodaMusic-v3.2.1-official-win32_x64.exe
+  MALICIOUS|Trojan.Win32.Generic.xdu|SE-Precise|95  conf=95  Trojan.Win32.Generic.xdu  D:\训练病毒\sougouExpiorerr_Setup_x64_25537\SogouExplorer_Setup_x64.exe
+  MALICIOUS|Trojan.Win32.Generic.mg6|SE-Precise|95  conf=95  Trojan.Win32.Generic.mg6  D:\训练病毒\自制\非自制\MEMZ.exe
+  MALICIOUS|Trojan.Win32.Generic.zdq|SE-Precise|95  conf=95  Trojan.Win32.Generic.zdq  D:\训练病毒\yfy-fanyifuan-6.22.8\yfy-fanyifuan-6.22.8.exe
+  MALICIOUS|Trojan.Win32.Generic.9hw|SE-Precise|95  conf=95  Trojan.Win32.Generic.9hw  D:\训练病毒\OneChat-win-AutoSetup\OneChat-win-AutoSetup-1.7.4-x64.exe
+  MALICIOUS|Trojan.Win32.Wiper.zzv|Cloud-DB|90  conf=90  Trojan.Win32.Wiper.zzv  D:\训练病毒\WinXP.Horror.Destructive\WinXP.Horror.Destructive.exe
+  MALICIOUS|Trojan.Win32.Generic.8ah|Cloud-DB|90  conf=90  Trojan.Win32.Generic.8ah  D:\训练病毒\自制\非自制\Pet.exe
+  MALICIOUS|HEUR:Trojan.BAT.Generic.fum|Script|95  conf=95  HEUR:Trojan.BAT.Generic.fum  D:\训练病毒\自制\GalaGame_Setup.bat
+  MALICIOUS|HEUR:Trojan.Win32.Generic.ji1|PE-Suspicious|85  conf=85  HEUR:Trojan.Win32.Generic.ji1  D:\训练病毒\自制\Game.exe
+  MALICIOUS|HEUR:Trojan.Win32.Generic.4pi|SE-Chain|95  conf=95  HEUR:Trojan.Win32.Generic.4pi  D:\训练病毒\恶性免杀样本\5876be168613a5e77024f79dad518662e8fd418f01d5839fc7e73ecb0f085a92_DeepSeek_v4_win.exe
+  MALICIOUS|HEUR:Trojan.Win32.KeyLogger.1a9|PE|90  conf=90  HEUR:Trojan.Win32.KeyLogger.1a9  D:\训练病毒\WinXP.Horror.Destructive\WinXP.Horror.Peacful.exe
