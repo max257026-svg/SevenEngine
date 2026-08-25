@@ -5,6 +5,10 @@ import shutil, zipfile, traceback, re, math, fnmatch, io, queue
 import logging, warnings
 import ctypes
 from collections import OrderedDict, Counter
+try:
+    from lightgbm_engine import LightGBMScanner
+except Exception:
+    LightGBMScanner = None
 warnings.filterwarnings("ignore", message="PKCS#7.*")
 CONFIG = {
     "worker_threads": 20,
@@ -18,16 +22,27 @@ CONFIG = {
         ".exe", ".dll", ".sys", ".ocx", ".scr", ".cpl", ".drv", ".com", ".msi",
         ".jar", ".vbs", ".ps1", ".js", ".bat", ".cmd", ".py", ".pyw", ".lnk", ".bin"
     ],
+    # 默认 False = 不过滤后缀名（扫描目录下所有文件，改名/无后缀的 PE 也能被扫到）。
+    # 传入 --DEBUG:UNANY 时置为 True，恢复仅扫描 scan_extensions 列表的旧行为。
+    "enable_ext_filter": False,
     "whitelist_file": "whitelist.txt",
     "log_file": "engine.log",
     "confidence_threshold": 60,
     "onnx_confidence_threshold": 85,
     "yara_rules_dir": "yara_rules",
+    "custom_rules_dir": "custom_rules",
+    "enable_custom_rules": True,
+    "custom_rule_scan_cap": 16777216,
     "machine_learning_file": "engines/study-engine.txt",
     "temp_extract_dir": "temp_extract",
     "extract_and_scan": True,
     "onnx_model_dir": "ONNX",
     "enable_onnx": True,
+    "enable_lightgbm": True,
+    "lightgbm_model": "EngineSET/lightgbm.pda",
+    "enable_lightgbm_white": True,
+    "lightgbm_white_prob": 0.15,
+    "enable_yara": False,  # YARA 依赖外部库且规则编写繁琐，默认关闭，改用内置自定义规则引擎(CUSTOM)
     "enable_pe_scan": True,
     "max_zip_depth": 2,
     "read_chunk_size": 62914560,
@@ -61,17 +76,17 @@ else:
 
 _ENGINE_DIR = os.path.join(BASE_DIR, "Engine")
 if os.path.isdir(_ENGINE_DIR):
-    for _k in ["yara_rules_dir","temp_extract_dir",
-               "onnx_model_dir","whitelist_file","log_file","feature_files_dir"]:
+    for _k in ["yara_rules_dir","temp_extract_dir","custom_rules_dir",
+               "onnx_model_dir","whitelist_file","log_file","feature_files_dir","lightgbm_model"]:
         _p = os.path.join(_ENGINE_DIR, CONFIG[_k])
         if os.path.exists(_p) or os.path.isdir(os.path.dirname(_p)):
             CONFIG[_k] = _p
         else:
             CONFIG[_k] = os.path.join(BASE_DIR, CONFIG[_k])
-else:
-    for _k in ["yara_rules_dir","temp_extract_dir",
-               "onnx_model_dir","whitelist_file","log_file","feature_files_dir"]:
-        CONFIG[_k] = os.path.join(BASE_DIR, CONFIG[_k])
+    else:
+        for _k in ["yara_rules_dir","temp_extract_dir","custom_rules_dir",
+               "onnx_model_dir","whitelist_file","log_file","feature_files_dir","lightgbm_model"]:
+            CONFIG[_k] = os.path.join(BASE_DIR, CONFIG[_k])
 SHARED_CONFIG_PATH = os.path.join(BASE_DIR, 'Main', 'Main', 'config.json')
 if not os.path.exists(SHARED_CONFIG_PATH):
     SHARED_CONFIG_PATH = os.path.join(BASE_DIR, 'Main', 'config.json')
@@ -87,7 +102,8 @@ if os.path.exists(SHARED_CONFIG_PATH):
     except Exception:
         pass
 for d in [os.path.dirname(CONFIG["machine_learning_file"]), CONFIG["temp_extract_dir"],
-          CONFIG["yara_rules_dir"], CONFIG["onnx_model_dir"], CONFIG["feature_files_dir"]]:
+          CONFIG["yara_rules_dir"], CONFIG["custom_rules_dir"], CONFIG["onnx_model_dir"], CONFIG["feature_files_dir"],
+          os.path.dirname(CONFIG["lightgbm_model"])]:
     os.makedirs(d, exist_ok=True)
 
 logger = logging.getLogger('Engine')
@@ -1237,6 +1253,222 @@ class YaraScanner:
         except:
             pass
         return None, 0, ""
+# === Custom native rule engine (replaces YARA) ===
+# Zero-dependency byte/hex/string pattern matching. Author rules in
+# `custom_rules/*.srule`. No external library, no compiler, easy to extend.
+#
+# Rule format (.srule):
+#   rule Macro_OLE_VBA {            # rule name (letters/digits/_./-)
+#       type = macro                # threat type label
+#       severity = 92               # confidence 0-100
+#       magic = D0CF11E0A1B11AE1    # file must start with these bytes (hex)
+#       hex = D0 CF 11 E0 A1 B1 1A E1   # hex pattern (all `hex` must match, AND)
+#       str = AutoOpen              # ASCII substring (any str/wide may match, OR)
+#       str = AutoExec
+#       wide = Attribut             # UTF-16LE substring
+#       at = 0                      # first hex pattern must sit at this offset
+#   }
+# Hex wildcards: `??` or `*` = any byte. `magic` is sugar for hex@offset0.
+import re as _re
+
+def _parse_hex_pattern(tok):
+    """Parse a hex token (with optional spaces / ':' / wildcards) -> (bytes, mask)."""
+    t = tok.strip().lower().replace(':', '').replace(' ', '')
+    if not t or len(t) % 2 != 0:
+        return None
+    out = bytearray()
+    mask = bytearray()
+    for i in range(0, len(t), 2):
+        pair = t[i:i + 2]
+        if pair in ('??', '**', '*'):
+            out.append(0)
+            mask.append(0)
+        else:
+            try:
+                b = int(pair, 16)
+            except ValueError:
+                return None
+            out.append(b)
+            mask.append(1)
+    return bytes(out), bytes(mask)
+
+def _match_at(data, pattern, mask, i):
+    for j in range(len(pattern)):
+        if mask[j] and data[i + j] != pattern[j]:
+            return False
+    return True
+
+def _hex_search(data, pattern, mask, at=None):
+    """Return first offset where pattern matches (mask: 1=exact, 0=wildcard)."""
+    n = len(pattern)
+    dlen = len(data)
+    if at is not None:
+        if at < 0:
+            at = dlen + at
+        if at < 0 or at + n > dlen:
+            return -1
+        return at if _match_at(data, pattern, mask, at) else -1
+    if n > dlen:
+        return -1
+    anchor = mask.find(1)
+    if anchor < 0:
+        anchor = 0
+    aval = pattern[anchor]
+    last = dlen - n
+    i = 0
+    while i <= last:
+        if data[i + anchor] != aval:
+            i += 1
+            continue
+        if _match_at(data, pattern, mask, i):
+            return i
+        i += 1
+    return -1
+
+class _CustomRule:
+    __slots__ = ('name', 'rtype', 'severity', 'hexes', 'strs', 'wides', 'magic', 'at')
+    def __init__(self, name, rtype, severity, hexes, strs, wides, magic, at):
+        self.name = name
+        self.rtype = rtype
+        self.severity = severity
+        self.hexes = hexes
+        self.strs = strs
+        self.wides = wides
+        self.magic = magic
+        self.at = at
+    def match(self, data):
+        if self.magic and data[:len(self.magic)] != self.magic:
+            return False
+        for k, (pattern, mask) in enumerate(self.hexes):
+            off = self.at if k == 0 else None
+            if _hex_search(data, pattern, mask, off) < 0:
+                return False
+        if self.strs or self.wides:
+            found = False
+            for s in self.strs:
+                if s in data:
+                    found = True
+                    break
+            if not found:
+                for w in self.wides:
+                    if w in data:
+                        found = True
+                        break
+            if not found:
+                return False
+        return True
+
+class CustomRuleScanner:
+    def __init__(self, rules_dir, cap=None):
+        self.rules_dir = rules_dir
+        self.cap = cap if cap is not None else CONFIG.get("custom_rule_scan_cap", 16 * 1024 * 1024)
+        self.rules = []
+        self.available = False
+        self.load_rules(rules_dir)
+    def load_rules(self, rules_dir):
+        self.rules = []
+        if not os.path.isdir(rules_dir):
+            return
+        for fn in sorted(os.listdir(rules_dir)):
+            if not fn.endswith('.srule'):
+                continue
+            full = os.path.join(rules_dir, fn)
+            try:
+                with open(full, 'r', encoding='utf-8', errors='ignore') as f:
+                    text = f.read()
+            except Exception:
+                continue
+            self.rules.extend(self._parse_srule(text, fn))
+        self.available = len(self.rules) > 0
+        if self.available:
+            print(f"[CUSTOM] 已加载 {len(self.rules)} 条自定义规则 (来自 {rules_dir})")
+    def _parse_srule(self, text, srcname):
+        rules = []
+        idx = 0
+        while True:
+            m = _re.search(r'rule\s+([A-Za-z0-9_.\-]+)\s*\{', text[idx:])
+            if not m:
+                break
+            name = m.group(1)
+            start = idx + m.end()
+            end = text.find('}', start)
+            if end < 0:
+                break
+            body = text[start:end]
+            idx = end + 1
+            rtype = 'virus'
+            severity = 90
+            hexes = []
+            strs = []
+            wides = []
+            magic = None
+            at = None
+            for line in body.splitlines():
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                k = k.strip().lower()
+                v = v.strip()
+                if k == 'type':
+                    rtype = v
+                elif k == 'severity':
+                    try:
+                        severity = int(float(v))
+                    except ValueError:
+                        severity = 90
+                elif k == 'hex':
+                    p = _parse_hex_pattern(v)
+                    if p:
+                        hexes.append(p)
+                    else:
+                        print(f"[CUSTOM] 警告: 规则 {name} ({srcname}) 的 hex 值 '{v}' 不是合法十六进制，已忽略")
+                elif k == 'magic':
+                    p = _parse_hex_pattern(v)
+                    if p:
+                        magic = p[0]
+                    else:
+                        print(f"[CUSTOM] 警告: 规则 {name} ({srcname}) 的 magic 值 '{v}' 不是合法十六进制，已忽略(规则退化为无头约束!)")
+                elif k == 'str':
+                    strs.append(v.encode('latin-1', 'ignore'))
+                elif k == 'wide':
+                    wides.append(v.encode('utf-16-le'))
+                elif k == 'at':
+                    try:
+                        at = int(v)
+                    except ValueError:
+                        at = None
+            if hexes or strs or wides or magic:
+                rules.append(_CustomRule(name, rtype, severity, hexes, strs, wides, magic, at))
+            else:
+                print(f"[CUSTOM] 规则 {name} ({srcname}) 无有效匹配条件，跳过")
+        return rules
+    def scan(self, filepath):
+        if not self.rules:
+            return None, 0, ""
+        try:
+            sz = os.path.getsize(filepath)
+        except Exception:
+            return None, 0, ""
+        if sz == 0:
+            return None, 0, ""
+        try:
+            with open(filepath, 'rb') as f:
+                if sz <= self.cap:
+                    data = f.read()
+                else:
+                    head = f.read(self.cap)
+                    f.seek(max(0, sz - 524288))
+                    tail = f.read()
+                    data = head + tail
+        except Exception:
+            return None, 0, ""
+        for r in self.rules:
+            if r.match(data):
+                return r.name, r.severity, r.name
+        return None, 0, ""
 DEFAULT_FEATURES = r"""
 [恶意程序]  = "asyncrat", "remcos", "quasar" 9
 ...
@@ -1651,7 +1883,7 @@ class StudyEngine:
             if conf >= 50 or rtype == 'malicious':
                 boost = min(20, 10 + count)
                 return boost
-        if threat == "CLEAN" or rtype == 'CLEAN':
+        if (str(threat or '')).startswith("CLEAN") or (str(rtype or '')).startswith("CLEAN"):
             return 0
         return 0
     def is_lore_whitelisted(self, filepath):
@@ -1797,7 +2029,7 @@ class OnnxScanner:
         try:
             import numpy as np
             if file_data is not None:
-                if file_data[:2] != b'MZ':
+                if len(file_data) < 2 or file_data[:2] != b'MZ':
                     return None, 0, ""
             elif filepath:
                 with open(filepath, 'rb') as f:
@@ -1807,19 +2039,50 @@ class OnnxScanner:
             feats = self.feature_extractor(filepath=filepath, file_data=file_data)
             if feats is None:
                 return None, 0, ""
-            inp = feats.reshape(1, -1).astype(np.float32)
+            inp = np.array(feats, dtype=np.float32).reshape(1, -1)
             out = self.session.run(None, {self.session.get_inputs()[0].name: inp})
-            if len(out) > 1:
-                prob = float(out[1][0][1])
-            else:
-                raw = out[0][0]
-                prob = float(raw[1] if hasattr(raw, '__len__') and len(raw) > 1 else raw)
+            prob = self._extract_prob(out)
+            if prob is None:
+                return None, 0, ""
             if prob >= self.threshold:
                 conf = int(prob * 100)
                 return "OnnxDetect", conf, f"ONNX{conf}%"
         except:
             pass
         return None, 0, ""
+
+    @staticmethod
+    def _extract_prob(out):
+        """Tolerant extraction of P(y=1) from an ONNX session output, regardless
+        of whether the model was exported with zipmap on/off."""
+        try:
+            import numpy as np
+            last = out[-1]
+            arr = np.array(last, dtype=object) if not isinstance(last, (list, tuple, np.ndarray)) else np.array(last)
+            if isinstance(arr, np.ndarray):
+                if arr.ndim == 2 and arr.shape[1] >= 2:
+                    return float(arr[0][1])
+                if arr.ndim == 1 and arr.shape[0] >= 2:
+                    return float(arr[1])
+                if arr.ndim == 1 and arr.shape[0] == 1:
+                    return float(arr[0])
+            if isinstance(last, (list, tuple)):
+                d = last[0]
+                if isinstance(d, dict):
+                    for k in (1, '1', 1.0):
+                        if k in d:
+                            return float(d[k])
+                    vals = list(d.values())
+                    if len(vals) >= 2:
+                        return float(vals[1])
+            first = out[0]
+            arr = np.array(first)
+            if arr.ndim >= 1:
+                v = float(arr.reshape(-1)[-1])
+                return 1.0 / (1.0 + math.exp(-v))
+        except Exception:
+            return None
+        return None
 class XiguaCloudScanner:
     def __init__(self):
         self.api_base = CONFIG.get("cloud_api_base", "https://cloudapi.xiguastudio.top")
@@ -1958,7 +2221,7 @@ class XiguaCloudScanner:
         if not sha:
             return None, 0, ""
         result, family = self.check_hash(sha)
-        if result in ("white", "whitelisted", "clean"):
+        if result in ("white", "whitelisted", "clean") or str(result).startswith("CLEAN"):
             return "WHITE", 0, ""
         if result in ("black", "malicious"):
             ttype = classify_threat(filepath, rule_name=family or "Cloud")
@@ -2153,8 +2416,15 @@ class Scanner:
         self.cache = LRUCache()
         self._file_hash_cache = LRUCache(maxsize=500)
         self.yara = YaraScanner(CONFIG["yara_rules_dir"])
+        self.custom = CustomRuleScanner(CONFIG["custom_rules_dir"])
         self.study = StudyEngine(CONFIG["machine_learning_file"])
         self.onnx = OnnxScanner(CONFIG["onnx_model_dir"])
+        self.lgbm = None
+        try:
+            if LightGBMScanner is not None and CONFIG.get("enable_lightgbm", True):
+                self.lgbm = LightGBMScanner(os.path.join(BASE_DIR, CONFIG["lightgbm_model"]))
+        except Exception:
+            self.lgbm = None
         self.advanced = AdvancedSignatureScanner(CONFIG["feature_files_dir"])
         self.entropy = EntropyAnalyzer()
         self.packer = PackerDetector()
@@ -2182,7 +2452,13 @@ class Scanner:
             if _is_security_tool_component(filepath):
                 return "CLEAN", 0, ""
             ext = os.path.splitext(filepath)[1].lower()
-            _is_pe = ext in {'.exe','.dll','.sys','.ocx','.scr','.cpl','.drv','.com'}
+            _quick_mz = False
+            try:
+                with open(filepath, 'rb') as _f:
+                    _quick_mz = _f.read(2) == b'MZ'
+            except Exception:
+                _quick_mz = False
+            _is_pe = (ext in {'.exe','.dll','.sys','.ocx','.scr','.cpl','.drv','.com'}) or _quick_mz
             _is_script = ext in {'.vbs','.ps1','.js','.bat','.cmd','.py','.pyw','.vbe','.wsf','.hta','.sct','.wsc'}
             sha = None
             pe_info = None
@@ -2217,6 +2493,16 @@ class Scanner:
                         return "WHITELIST", 0, ""
             if self.study.is_lore_whitelisted(filepath) and not (_is_pe or _is_msi or _is_jar) and not (head_data[:2] == b'MZ'):
                 return "WHITELIST", 0, ""
+            # === High-confidence white ML verdict (quick path) ===
+            # Same gate as scan_file: short-circuit SE-Chain / PE heuristics on
+            # model-confident-clean PEs to suppress false positives on system binaries.
+            if (CONFIG.get("enable_lightgbm_white", True)
+                    and CONFIG.get("enable_lightgbm", True)
+                    and _is_pe and _quick_mz
+                    and getattr(self, "lgbm", None) is not None and self.lgbm.available):
+                _ml_p_q = self.lgbm.score(filepath)
+                if 0.0 <= _ml_p_q < CONFIG.get("lightgbm_white_prob", 0.15):
+                    return "CLEAN|LightGBM-White", 0, ""
             if pe_info:
                 pe_apis = pe_info['apis']
                 if pe_apis:
@@ -2277,11 +2563,15 @@ class Scanner:
                 head_data = b""
 
             ext = os.path.splitext(filepath)[1].lower()
-            _is_pe = ext in {'.exe','.dll','.sys','.ocx','.scr','.cpl','.drv','.com'}
+            _head_mz = head_data[:2] == b'MZ'
+            # Content-based PE detection: keep the extension hint but ALSO accept
+            # any file whose first two bytes are MZ, so renamed / extension-less
+            # PE files are no longer missed by the suffix filter.
+            _is_pe = (ext in {'.exe','.dll','.sys','.ocx','.scr','.cpl','.drv','.com'}) or _head_mz
             _is_script = ext in {'.vbs','.ps1','.js','.bat','.cmd','.py','.pyw','.vbe','.wsf','.hta','.sct','.wsc'}
             _is_msi = ext == '.msi'
             _is_jar = ext in {'.jar', '.bin'}
-            if _is_pe or _is_script or _is_msi or _is_jar:
+            if (_is_pe or _is_script or _is_msi or _is_jar) and CONFIG.get("enable_study_engine", True):
                 se_type, se_conf, se_feat = self.study.scan_precise(filepath)
                 if se_type:
                     ttype = classify_threat(filepath, rule_name=se_type, heuristic=False)
@@ -2289,7 +2579,26 @@ class Scanner:
                     self.cache.put(key, (res, se_conf, ttype))
                     self.study.record_result(filepath, ttype, se_conf, se_feat)
                     return res, se_conf, ttype
-            if _is_msi and head_data[:4] == b'\xD0\xCF\x11\xE0':
+
+            # === High-confidence white ML verdict ===
+            # If LightGBM is highly confident this PE image is CLEAN (malware
+            # probability far below its operating threshold), short-circuit the
+            # noisy heuristics (PE-Suspicious / ".NET binary without signature" /
+            # SE-Chain / Packer-Entropy ...) that otherwise flag legitimate system
+            # binaries (notepad.exe, explorer.exe, *.ni.dll, ...) as MALICIOUS.
+            # Legacy heuristic / rule / YARA / cloud logic is preserved and still
+            # runs for every other file; this gate only fires on model-confident-clean PEs.
+            if (CONFIG.get("enable_lightgbm_white", True)
+                    and CONFIG.get("enable_lightgbm", True)
+                    and _is_pe and head_data[:2] == b'MZ'
+                    and getattr(self, "lgbm", None) is not None and self.lgbm.available):
+                _ml_p = self.lgbm.score(filepath, file_data=head_data)
+                if 0.0 <= _ml_p < CONFIG.get("lightgbm_white_prob", 0.15):
+                    self.cache.put(key, ("CLEAN|LightGBM-White", 0, ""))
+                    self.study.record_result(filepath, "CLEAN", 0, "LightGBM-White")
+                    return "CLEAN|LightGBM-White", 0, ""
+
+            if CONFIG.get("enable_pe_scan", True) and _is_msi and head_data[:4] == b'\xD0\xCF\x11\xE0':
                 try:
                     _msi_signer = _extract_msi_signer(filepath)
                     if _msi_signer:
@@ -2391,7 +2700,7 @@ class Scanner:
                 return "WHITELIST", 0, ""
             _norm_fp_dos = os.path.normpath(filepath).lower().replace('\\', '/')
             _is_winsxs_dos = 'windows/winsxs/' in _norm_fp_dos
-            if ext in {'.com', '.exe'} and not _is_security_tool_component(filepath) and not _is_winsxs_dos:
+            if CONFIG.get("enable_pe_scan", True) and ext in {'.com', '.exe'} and not _is_security_tool_component(filepath) and not _is_winsxs_dos:
                 _dos_score = 0
                 _dos_reasons = []
                 _dos_fsize = os.path.getsize(filepath)
@@ -2548,7 +2857,7 @@ class Scanner:
                         self.cache.put(key, (_dos_res, _dos_final, _dos_ttype))
                         self.study.record_result(filepath, _dos_ttype, _dos_final, '; '.join(_dos_reasons))
                         return _dos_res, _dos_final, _dos_ttype
-            if _is_pe and head_data[:2] == b'MZ':
+            if CONFIG.get("enable_pe_scan", True) and _is_pe and head_data[:2] == b'MZ':
                 _pe_info = _parse_pe_all(filepath)
                 pe_apis = _pe_info['apis']
                 signer = _pe_info['signer']
@@ -2700,7 +3009,9 @@ class Scanner:
                                 self.study.record_result(filepath, _low_api_ttype, _low_api_final, "Low-import PE")
                                 return _low_api_res, _low_api_final, _low_api_ttype
 
-            if _is_pe and head_data[:2] == b'MZ' and '_pe_info' in dir() and not _is_security_tool_component(filepath):
+            if (CONFIG.get("enable_pe_scan", True)
+                    and _is_pe and head_data[:2] == b'MZ' and '_pe_info' in dir()
+                    and not _is_security_tool_component(filepath)):
                 _apis_set = set(a.lower() for a in pe_apis) if pe_apis else set()
                 _susp_score = 0
                 _susp_reasons = []
@@ -3222,7 +3533,7 @@ class Scanner:
 
             study_boost = self.study.get_boost(filepath)
 
-            if head_data[:4] == b'\x4c\x00\x00\x00' and not _is_security_tool_component(filepath):
+            if CONFIG.get("enable_pe_scan", True) and head_data[:4] == b'\x4c\x00\x00\x00' and not _is_security_tool_component(filepath):
                 try:
                     _lnk_text_all = head_data.decode('utf-16-le','ignore').lower() + head_data.decode('latin-1','ignore').lower()
                     _lnk_score_all = 0
@@ -3240,7 +3551,7 @@ class Scanner:
             is_script = ext in {'.vbs','.ps1','.js','.bat','.cmd','.py','.pyw','.vbe','.wsf','.hta','.sct','.wsc'}
             is_pe_file = _is_pe
 
-            if ext != '.sys' and not is_script:
+            if CONFIG.get("enable_study_engine", True) and ext != '.sys' and not is_script:
                 name, conf, feat = self.advanced.scan(filepath, file_data=head_data)
                 if name and conf >= CONFIG["confidence_threshold"]:
                     final = min(100, conf + study_boost)
@@ -3250,7 +3561,7 @@ class Scanner:
                     self.study.record_result(filepath, ttype, final, "Signature: " + name)
                     return res, final, ttype
 
-            if is_script:
+            if CONFIG.get("enable_study_engine", True) and is_script:
                 script_tool_names = {'scan','detect','kill','clean','protect','defense','security','antivirus','antimalware','pasw','injectscan','setup'}
                 fname_lower = os.path.basename(filepath).lower()
                 is_bat = ext in {'.bat', '.cmd'}
@@ -3426,14 +3737,35 @@ class Scanner:
                     self.study.record_result(filepath, ttype, final, "ONNX AI")
                     return res, final, ttype
 
-            name, conf, feat = self.yara.scan(filepath)
-            if name and conf >= CONFIG["confidence_threshold"]:
-                final = min(100, conf + study_boost)
-                ttype = classify_threat(filepath, rule_name=name)
-                res = f"MALICIOUS|{ttype}|YARA|{final}"
-                self.cache.put(key, (res, final, ttype))
-                self.study.record_result(filepath, ttype, final, "YARA: " + name)
-                return res, final, ttype
+            if CONFIG.get("enable_lightgbm", True) and self.lgbm is not None:
+                name, conf, feat = self.lgbm.scan(filepath, file_data=head_data)
+                if name and conf >= CONFIG["confidence_threshold"]:
+                    final = min(100, conf + study_boost)
+                    ttype = classify_threat(filepath, rule_name=name, heuristic=True)
+                    res = f"MALICIOUS|{ttype}|LightGBM|{final}"
+                    self.cache.put(key, (res, final, ttype))
+                    self.study.record_result(filepath, ttype, final, "LightGBM AI")
+                    return res, final, ttype
+
+            if CONFIG.get("enable_yara", True):
+                name, conf, feat = self.yara.scan(filepath)
+                if name and conf >= CONFIG["confidence_threshold"]:
+                    final = min(100, conf + study_boost)
+                    ttype = classify_threat(filepath, rule_name=name)
+                    res = f"MALICIOUS|{ttype}|YARA|{final}"
+                    self.cache.put(key, (res, final, ttype))
+                    self.study.record_result(filepath, ttype, final, "YARA: " + name)
+                    return res, final, ttype
+
+            if CONFIG.get("enable_custom_rules", True):
+                name, conf, feat = self.custom.scan(filepath)
+                if name and conf >= CONFIG["confidence_threshold"]:
+                    final = min(100, conf + study_boost)
+                    ttype = classify_threat(filepath, rule_name=name)
+                    res = f"MALICIOUS|{ttype}|CUSTOM|{final}"
+                    self.cache.put(key, (res, final, ttype))
+                    self.study.record_result(filepath, ttype, final, "CUSTOM: " + name)
+                    return res, final, ttype
 
             if _is_pe and head_data[:2] == b'MZ':
                 _signer2 = _pe_info.get('signer') if '_pe_info' in dir() else _extract_signer(filepath)
@@ -3509,7 +3841,7 @@ class Scanner:
                             return res, final, ttype
 
                 significant_feats = [r for r in feat.split(';') if r]
-                if _is_pe and (significant_feats or (not feat and not is_mal)):
+                if CONFIG.get("enable_pe_scan", True) and _is_pe and (significant_feats or (not feat and not is_mal)):
                     _pe_signer3 = _pe_info.get('signer') if '_pe_info' in dir() else None
                     _pe_vi3 = _pe_info.get('version_info', {}) if '_pe_info' in dir() else {}
                     _pe_has_vi3 = any(_pe_vi3.get(k) for k in ('CompanyName','ProductName','FileDescription','LegalCopyright') if k)
@@ -3532,7 +3864,7 @@ class Scanner:
                                 self.study.record_result(filepath, ttype, final, "Packer/Entropy")
                                 return res, final, ttype
 
-            if _is_pe and head_data[:2] == b'MZ':
+            if CONFIG.get("enable_pe_scan", True) and _is_pe and head_data[:2] == b'MZ':
                 _sec_scores = 0
                 _susp_secs = []
                 for _sn, _se, _sr, _sc in _pe_info.get('sections', []):
@@ -3556,7 +3888,7 @@ class Scanner:
             if depth == 0 and CONFIG["extract_and_scan"] and filepath.lower().endswith('.zip'):
                 pass
 
-            if disguise:
+            if CONFIG.get("enable_pe_scan", True) and disguise:
                 res = "MALICIOUS||Disguise|55"
                 self.cache.put(key, (res, 55, ""))
                 self.study.record_result(filepath, "", 55, "Disguise")
@@ -3605,6 +3937,7 @@ class Scanner:
         import queue
         from concurrent.futures import ThreadPoolExecutor
         exts = set(CONFIG["scan_extensions"])
+        _use_ext_filter = CONFIG.get("enable_ext_filter", False)
         skip_dirs = set(CONFIG.get("skip_dirs", []))
         threads = CONFIG.get("scan_dir_threads", 8)
         _SENTINEL = object()
@@ -3618,10 +3951,13 @@ class Scanner:
                     if not recursive:
                         dirs[:] = []
                     for f in fs:
-                        if os.path.splitext(f)[1].lower() in exts:
-                            fq.put(os.path.join(root, f))
-                            with rlock:
-                                results["total"] += 1
+                        # 默认不过滤后缀名：扫描所有文件（改名/无后缀 PE 也能命中 MZ 内容判定）。
+                        # 仅当 --DEBUG:UNANY 启用扩展名过滤时，才跳过不在 scan_extensions 的文件。
+                        if _use_ext_filter and os.path.splitext(f)[1].lower() not in exts:
+                            continue
+                        fq.put(os.path.join(root, f))
+                        with rlock:
+                            results["total"] += 1
             except Exception:
                 pass
             finally:
@@ -3649,7 +3985,7 @@ class Scanner:
                         results["threats"].append((fp, res, conf, ttype))
                     elif res == "WHITELIST":
                         results["whitelist"] += 1
-                    elif res == "CLEAN":
+                    elif res.startswith("CLEAN"):
                         results["clean"] += 1
                     else:
                         results["error"] += 1
@@ -3681,11 +4017,149 @@ def ensure_default_signatures():
         with open(json_path, 'w', encoding='utf-8') as f:
             json.dump(DEFAULT_JSON_SIGNATURES, f, indent=2, ensure_ascii=False)
 
+# === DEBUG mode: isolate a single engine layer for testing ===
+# Usage:  python SevenEngine.py <target> --DEBUG:ONNX
+#         python SevenEngine.py <target> --DEBUG:LIGHTGBM
+#         python SevenEngine.py <target> --DEBUG:HEUR
+#         python SevenEngine.py <target> --DEBUG:YARA
+#         python SevenEngine.py <target> --DEBUG:CUSTOM
+#         python SevenEngine.py <target> --DEBUG:CLOUD
+# No --DEBUG flag -> all engines active (default).
+#
+# Each mode disables every engine layer except the named one, so you can
+# measure that layer's standalone detection / false-positive behaviour.
+_DEBUG_MODES = {
+    "ONNX": {
+        "enable_onnx": True, "enable_lightgbm": False, "enable_lightgbm_white": False,
+        "enable_pe_scan": False, "enable_study_engine": False,
+        "enable_stu_txt_scanner": False, "enable_json_scanner": False,
+        "enable_yara": False,
+        "cloud_scan_enabled": False, "avic_scan_enabled": False, "enable_external_clouds": False,
+    },
+    "LIGHTGBM": {
+        "enable_onnx": False, "enable_lightgbm": True, "enable_lightgbm_white": False,
+        "enable_pe_scan": False, "enable_study_engine": False,
+        "enable_stu_txt_scanner": False, "enable_json_scanner": False,
+        "enable_yara": False,
+        "cloud_scan_enabled": False, "avic_scan_enabled": False, "enable_external_clouds": False,
+    },
+    "HEUR": {
+        "enable_onnx": False, "enable_lightgbm": False, "enable_lightgbm_white": False,
+        "enable_pe_scan": True, "enable_study_engine": True,
+        "enable_stu_txt_scanner": True, "enable_json_scanner": True,
+        "enable_yara": False,
+        "cloud_scan_enabled": False, "avic_scan_enabled": False, "enable_external_clouds": False,
+    },
+    "YARA": {
+        "enable_onnx": False, "enable_lightgbm": False, "enable_lightgbm_white": False,
+        "enable_pe_scan": False, "enable_study_engine": False,
+        "enable_stu_txt_scanner": False, "enable_json_scanner": False,
+        "enable_yara": True,
+        "cloud_scan_enabled": False, "avic_scan_enabled": False, "enable_external_clouds": False,
+    },
+    "CUSTOM": {
+        "enable_onnx": False, "enable_lightgbm": False, "enable_lightgbm_white": False,
+        "enable_pe_scan": False, "enable_study_engine": False,
+        "enable_stu_txt_scanner": False, "enable_json_scanner": False,
+        "enable_yara": False, "enable_custom_rules": True,
+        "cloud_scan_enabled": False, "avic_scan_enabled": False, "enable_external_clouds": False,
+    },
+    "CLOUD": {
+        "enable_onnx": False, "enable_lightgbm": False, "enable_lightgbm_white": False,
+        "enable_pe_scan": False, "enable_study_engine": False,
+        "enable_stu_txt_scanner": False, "enable_json_scanner": False,
+        "enable_yara": False,
+        "cloud_scan_enabled": True, "avic_scan_enabled": True, "enable_external_clouds": True,
+    },
+}
+
+def _write_scan_output(path, rows):
+    """Write scan results to `path` (relative -> current working directory).
+
+    Format is chosen by the file extension:
+      * .json -> JSON array of {path, result, confidence, type}
+      * .csv  -> CSV with header row
+      * else  -> plain text, one record per line (result<TAB>confidence<TAB>type<TAB>path)
+    """
+    import csv as _csv
+    import json as _json
+    if not os.path.isabs(path):
+        path = os.path.join(os.getcwd(), path)
+    _ext = os.path.splitext(path)[1].lower()
+    try:
+        if _ext == ".json":
+            with open(path, "w", encoding="utf-8") as f:
+                _json.dump([{"path": p, "result": r, "confidence": c, "type": t}
+                            for p, r, c, t in rows], f, ensure_ascii=False, indent=2)
+        elif _ext == ".csv":
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                _w = _csv.writer(f)
+                _w.writerow(["path", "result", "confidence", "type"])
+                for p, r, c, t in rows:
+                    _w.writerow([p, r, c, t])
+        else:
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("# SevenEngine scan results\n")
+                f.write("# result\tconfidence\ttype\tpath\n")
+                for p, r, c, t in rows:
+                    f.write(f"{r}\t{c}\t{t}\t{p}\n")
+        print(f"[OUTPUT] 扫描结果已写入: {path} ({len(rows)} 条)")
+    except Exception as e:
+        print(f"[OUTPUT] 写入失败: {e}")
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Usage: python SEnew.py <file_path|dir_path>")
+        print("Usage: python SevenEngine.py <file_path|dir_path> "
+              "[--DEBUG:ONNX|LIGHTGBM|HEUR|YARA|CUSTOM|CLOUD|UNANY] [--OUTPUT:name.ext]")
         sys.exit(1)
-    target = sys.argv[1]
+
+    # Parse flags (case-insensitive). --DEBUG: selects an engine layer (or UNANY
+    # to re-enable extension filtering); --OUTPUT: saves results to a file in cwd.
+    _debug_mode = None
+    _ext_filter = False
+    _output_path = None
+    _positional = []
+    for _arg in sys.argv[1:]:
+        _a = _arg.strip()
+        _au = _a.upper()
+        if _au.startswith("--DEBUG:"):
+            _mode = _a[len("--DEBUG:"):].strip().upper()
+            if _mode == "UNANY":
+                _ext_filter = True
+                print("[DEBUG] 启用后缀过滤 (UNANY)：仅扫描 scan_extensions 列表中的文件")
+            elif _mode in _DEBUG_MODES:
+                _debug_mode = _mode
+            else:
+                print(f"ERROR: unknown DEBUG mode '{_mode}'. "
+                      f"Valid: {', '.join(sorted(_DEBUG_MODES))}, UNANY")
+                sys.exit(1)
+        elif _au.startswith("--OUTPUT:"):
+            _output_path = _a[len("--OUTPUT:"):].strip()
+            if not _output_path:
+                print("ERROR: --OUTPUT: 需要文件名，例如 --OUTPUT:result.csv")
+                sys.exit(1)
+        else:
+            _positional.append(_arg)
+    if not _positional:
+        print("ERROR: no target path specified.")
+        sys.exit(1)
+    target = _positional[0]
+
+    # Default: NO extension filtering (scan every file). UNANY turns it on.
+    CONFIG["enable_ext_filter"] = _ext_filter
+
+    # Apply engine DEBUG overrides (UNANY leaves every engine layer enabled).
+    if _debug_mode:
+        _overrides = _DEBUG_MODES[_debug_mode]
+        CONFIG.update(_overrides)
+        print(f"[DEBUG] 模式: {_debug_mode}  (仅启用 {_debug_mode} 引擎层，其余全部禁用)")
+        _active = [k.replace("enable_", "").replace("_", " ").upper()
+                   for k, v in _overrides.items() if v and k.startswith("enable_")]
+        print(f"[DEBUG] 激活: {', '.join(_active)}")
+    else:
+        print("[DEBUG] 模式: ALL (全部引擎默认启用，不过滤后缀名)")
+
     if not os.path.exists(target):
         print(f"ERROR: Not found: {target}")
         sys.exit(1)
@@ -3694,27 +4168,34 @@ if __name__ == '__main__':
     ensure_default_signatures()
 
     scanner = Scanner()
+    _output_rows = []
+
+    def _cb(fp, res, conf, ttype):
+        _output_rows.append((fp, res, conf, ttype))
+        if res.startswith("MALICIOUS"):
+            print(f"  [!] {res}  {fp}")
+        elif res == "WHITELIST":
+            print(f"  [WL] {res}  {fp}")
+        elif res.startswith("CLEAN"):
+            print(f"  [OK] {res}  {fp}")
+        else:
+            print(f"  [??] {res}  {fp}")
+
     if os.path.isdir(target):
         print(f"扫描目录: {target}")
-        def _cb(fp, res, conf, ttype):
-            if res.startswith("MALICIOUS"):
-                print(f"  [!] {res}  {fp}")
-            elif res == "WHITELIST":
-                print(f"  [WL] {res}  {fp}")
-            elif res == "CLEAN":
-                print(f"  [OK] {res}  {fp}")
-            else:
-                print(f"  [??] {res}  {fp}")
         r = scanner.scan_directory(target, callback=_cb)
         print(f"\n扫描完成: 共 {r['total']} 文件, 扫描 {r['scanned']}, 恶意 {r['malicious']}, 干净 {r['clean']}, 白名单 {r['whitelist']}, 错误 {r['error']}")
         if r["threats"]:
             print("\n--- 检出威胁 ---")
             for fp, res, conf, ttype in r["threats"]:
                 print(f"  {res}  conf={conf}  {ttype}  {fp}")
-        sys.exit(1 if r["malicious"] else 0)
     else:
         result, confidence, vt = scanner.scan_file(target)
+        _output_rows.append((target, result, confidence, vt))
         print(f"Result: {result}")
         print(f"Confidence: {confidence}")
         print(f"Info: {vt}")
-        sys.exit(0 if result == "CLEAN" or result == "WHITELIST" else 1)
+
+    if _output_path:
+        _write_scan_output(_output_path, _output_rows)
+    sys.exit(1 if any(r[1].startswith("MALICIOUS") for r in _output_rows) else 0)

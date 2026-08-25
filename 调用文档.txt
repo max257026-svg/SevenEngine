@@ -1,6 +1,70 @@
 PeTechnology
     v0.0.2
 
+依赖库⬇安装所有依赖，否则扫描结果造成影响，可能误报或者降低扫描率
+pip install pefile cryptography onnxruntime lightgbm requests
+
+输出新格式查找源代码
+参考示例，可能出错
+
+单文件多场景结果
+白名单（WHITELIST）
+[DEBUG] 模式: ALL (全部引擎默认启用，不过滤后缀名)
+Result: WHITELIST
+Confidence: 0
+Info: 
+
+引擎判定为干净（CLEAN）
+[DEBUG] 模式: ALL (全部引擎默认启用，不过滤后缀名)
+Result: CLEAN
+Confidence: 0
+Info: 
+
+ 被 LightGBM 模型高置信度判定为干净（概率低于阈值）
+[DEBUG] 模式: ALL (全部引擎默认启用，不过滤后缀名)
+Result: CLEAN|LightGBM-White
+Confidence: 0
+Info: 
+输出格式：终端严格打印 Result:、Confidence:、Info: 三行。
+
+与恶意结果的差异：恶意结果（如 MALICIOUS|...）会有非零的 Confidence 值（如 92），并且 Info 字段会包含威胁家族名称。而 WL/OK 结果这两项均为空或零。
+
+保存到文件（--OUTPUT:）：若您同时指定了输出文件（如 --OUTPUT:result.csv），该文件中会记录 CLEAN 或 WHITELIST 状态，置信度为 0，类型为空。
+
+如果您的实际输出与上述不符（例如出现报错或奇怪的数值）请联系或查看源代码获取示例或进行扫描测试和系统目录扫描测试来获取单、多文件、目录的结果，可包含所有格式。
+
+扫描目录: D:\test_folder
+  [OK] CLEAN|LightGBM-White  D:\test_folder\notepad.exe
+  [!] MALICIOUS|Trojan.Win32.Ransom.xyz|PE-Suspicious|87  D:\test_folder\bad.exe
+  [WL] WHITELIST  D:\test_folder\trusted.dll
+...
+扫描完成: 共 150 文件, 扫描 150, 恶意 3, 干净 145, 白名单 2, 错误 0
+--- 检出威胁 ---
+  MALICIOUS|Trojan.Win32.Ransom.xyz|PE-Suspicious|87  conf=87  Trojan.Win32.Ransom.xyz  D:\test_folder\bad.exe
+
+ 保存结果到文件（支持 JSON / CSV / TXT）
+python SevenEngine.py D:\scan_dir --OUTPUT:report.json
+生成文件内容示例（JSON）：
+[
+  {"path": "D:\\scan_dir\\bad.exe", "result": "MALICIOUS|Trojan.Win32.Ransom.abc|PE-Suspicious|92", "confidence": 92, "type": "Trojan.Win32.Ransom.abc"},
+  {"path": "D:\\scan_dir\\clean.dll", "result": "CLEAN", "confidence": 0, "type": ""}
+]
+CSV/TXT 格式类似
+调试模式（仅启用单一引擎）
+--DEBUG:ONNX – 只跑 ONNX 模型
+
+--DEBUG:LIGHTGBM – 只跑 LightGBM
+
+--DEBUG:HEUR – 只跑 PE 启发式 + 脚本分析
+
+--DEBUG:YARA – 只跑 YARA 规则（需准备规则）
+
+--DEBUG:CUSTOM – 只跑自定义规则（.srule）
+
+--DEBUG:CLOUD – 只跑云端 API（Xigua/AVIC）
+
+--DEBUG:UNANY – 恢复“仅扫描指定后缀”（默认扫描所有文件，此开关还原旧行为）
+
 
 python SevenEngine.py "路径"
 python SevenEngine.py "文件路径"

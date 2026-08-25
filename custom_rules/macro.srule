@@ -1,0 +1,36 @@
+# 旧版 Office OLE/CFBF 复合文档宏病毒检测（替代原 YARA 宏规则）
+# 仅对以 D0CF11E0 开头的 OLE 文档生效；docx/xlsx 是 PK(ZIP) 头，不会误伤。
+# 核心思路：宏病毒必定含自动执行入口（AutoOpen/AutoExec/Document_Open 等），
+# 命中即判宏病毒，避免把"普通带宏文档"一律报毒。
+
+rule Macro_OLE_AutoRun {
+    type = macro
+    severity = 92
+    magic = D0CF11E0A1B11AE1
+    str = AutoOpen
+    str = AutoExec
+    str = Document_Open
+    str = Workbook_Open
+    str = Sub Auto_Open
+    str = Sub Document_Open
+    str = ThisDocument
+}
+
+rule Macro_OLE_PowerShell {
+    type = macro
+    severity = 90
+    magic = D0CF11E0A1B11AE1
+    str = powershell
+    str = cmd.exe
+    str = CreateObject
+}
+
+# Excel 4.0 (XLM) 宏表 —— 现代宏病毒常用落地手段
+rule Macro_XLM_Excel4 {
+    type = macro
+    severity = 90
+    magic = D0CF11E0A1B11AE1
+    str = Excel4MacroSheet
+    str = _xlm
+    str = Auto_Open
+}

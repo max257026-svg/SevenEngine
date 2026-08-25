@@ -1,0 +1,17 @@
+# 杂项强特征规则
+
+# EICAR 标准反病毒测试串（用于验证引擎链路是否打通）
+rule EICAR_Test {
+    type = test
+    severity = 95
+    str = X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+}
+
+# CHM 帮助文件中的 script 落地（info / skeleton 是 CHM 内嵌脚本容器特征）
+rule CHM_Script {
+    type = trojan
+    severity = 86
+    magic = 49545346
+    str = <script
+    str = mshtml
+}

@@ -1,0 +1,34 @@
+# 脚本下载器 / 落地器检测（vbs/js/ps1/hta 等）
+# 每条规则内的 str 为"任意命中即判"（OR），均为强指示器，避免弱特征误报。
+
+rule Script_PS_Encoded {
+    type = trojan
+    severity = 90
+    str = PowerShell -EncodedCommand
+    str = powershell -enc
+    str = IEX (New-Object
+    str = iex(
+}
+
+rule Script_CertUtil_Download {
+    type = trojan
+    severity = 88
+    str = certutil -urlcache
+    str = certutil.exe -urlcache
+}
+
+rule Script_Mshta {
+    type = trojan
+    severity = 88
+    str = mshta http
+    str = mshta.exe
+}
+
+rule Script_VBS_Dropper {
+    type = trojan
+    severity = 85
+    str = CreateObject("WScript.Shell")
+    str = WScript.Shell
+    str = XMLHTTP
+    str = WinHttp.WinHttpRequest
+}
